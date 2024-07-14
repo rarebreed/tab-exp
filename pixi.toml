@@ -1,0 +1,22 @@
+[project]
+name = "tab-exp"
+version = "0.1.0"
+description = "Add a short description here"
+authors = ["Sean Toner <placeoftheway@gmail.com>"]
+channels = ["pytorch", "nvidia/label/cuda-11.8.0", "nvidia", "conda-forge"]
+platforms = ["win-64", "linux-64"]
+
+[tasks]
+
+[dependencies]
+python = ">=3.11.6,<3.12"
+pytorch = ">=2.2,<2.3"
+pytorch-cuda = ">=11.8.0"
+
+[pypi-dependencies]
+pytorch-tabular = { version = "*", extras = ["extra"] }
+ipykernel = "*"
+scipy = { version = ">=1.12.0, <1.13" }
+numpy = { version = ">=1.23,<1.24" }
+polars = "*"
+mimesis = "*"
