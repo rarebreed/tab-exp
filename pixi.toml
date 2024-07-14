@@ -7,6 +7,33 @@ channels = ["pytorch", "nvidia/label/cuda-11.8.0", "nvidia", "conda-forge"]
 platforms = ["win-64", "linux-64"]
 
 [tasks]
+ollama-run = {cmd = "ollama run llama3:8b"}
+ollama-llama3 = "ollama pull llama3:8b"
+ollama-pull = { cmd = "ollama pull starcoder2:3b", depends-on = ["ollama-llama3"]}
+ollama-status = {cmd = "sudo systemctl status ollama"}
+ollama-ps = "ollama ps"
+
+[feature.win.tasks]
+ollama-install = {cmd = "winget install ollama"}
+
+[feature.linux.tasks]
+ollama-install  = {cmd = "curl -fsSL https://ollama.com/install.sh | sh"}
+python-deps = {cmd = ["sudo", "apt", "install", "-y", 
+    "build-essential", "libssl-dev", "zlib1g-dev",
+    "libbz2-dev", "libreadline-dev", "libsqlite3-dev", "curl", "git",
+    "libncursesw5-dev", "xz-utils", "tk-dev", "libxml2-dev", 
+    "libxmlsec1-dev", "libffi-dev", "liblzma-dev"]}
+vscode-ext = {cmd = ["code", "--install-extension", "Continue.continue"]}
+
+[feature.win]
+#platforms = ["win-64"]
+
+[feature.linux]
+#platforms = ["linux-64"]
+
+[environments]
+win = ["win"]
+linux = ["linux"]
 
 [dependencies]
 python = ">=3.11.6,<3.12"
