@@ -34,6 +34,14 @@ Then cd into the tab-exp directory and run:
 pixi install
 ```
 
+## Generate Synthetic Data
+
+TODO: Describe how to generate synthetic data using the tab_exp.tab module.
+
+Still need to test out the module more.
+
 ## Fine tuning
 
 TODO: Describe how to fine tune the llama3 model using the synthetic data. That is created.
+
+We need the tokenizer for llama3 to create the inputs from the new custom dataset for fine tuning.
