@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add a short description here"
 authors = ["Sean Toner <placeoftheway@gmail.com>"]
 channels = ["pytorch", "nvidia/label/cuda-11.8.0", "nvidia", "conda-forge"]
-platforms = ["win-64", "linux-64"]
+platforms = ["linux-64"]
 
 [tasks]
 ollama-run = {cmd = "ollama run llama3:8b"}
@@ -13,8 +13,8 @@ ollama-pull = { cmd = "ollama pull starcoder2:3b", depends-on = ["ollama-llama3"
 ollama-status = {cmd = "sudo systemctl status ollama"}
 ollama-ps = "ollama ps"
 
-[feature.win.tasks]
-ollama-install = {cmd = "winget install ollama"}
+#[feature.win.tasks]
+#win-ollama-install = {cmd = "winget install ollama"}
 
 [feature.linux.tasks]
 ollama-install  = {cmd = "curl -fsSL https://ollama.com/install.sh | sh"}
@@ -25,15 +25,27 @@ python-deps = {cmd = ["sudo", "apt", "install", "-y",
     "libxmlsec1-dev", "libffi-dev", "liblzma-dev"]}
 vscode-ext = {cmd = ["code", "--install-extension", "Continue.continue"]}
 
-[feature.win]
-#platforms = ["win-64"]
-
 [feature.linux]
 #platforms = ["linux-64"]
 
+[feature.dev]
+platforms = ["win-64", "linux-64"]
+
+[feature.dev.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+autopep8 = "*"
+ruff = "*"
+
+[feature.dev.tasks]
+format = "autopep8 -i -r ."
+lint = "ruff check --fix ."
+test = "pytest -v"
+
 [environments]
-win = ["win"]
+#win = ["win"]
 linux = ["linux"]
+dev = ["dev"]
 
 [dependencies]
 python = ">=3.11.6,<3.12"

@@ -1,4 +1,5 @@
 
+from copy import deepcopy
 import random
 from typing import Literal, TypeAlias, TypedDict, cast
 
@@ -10,12 +11,13 @@ field = Field(Locale.EN, seed=0xff)
 fieldset = Fieldset(Locale.EN, seed=0xff)
 
 
-
 class User(TypedDict):
     name: str
     address: str
     phone: str
     email: str
+    user_id: str
+
 
 class Activity(TypedDict):
     start: int
@@ -28,13 +30,14 @@ class Event(TypedDict):
     contacts: list[User]
     organization_id: str
     business_unit: str
-    resources: str
+    resources: list[str]
     activity: Activity
     channel: str
     priority: int
     version: int
     anonymized: Literal["false", "true"]
     event_id: str
+
 
 PiiColumnName: TypeAlias = Literal[
     "participant.name",
@@ -80,6 +83,7 @@ Columns = (
 def full_address():
     return f"{field('address')}, {field('address.city')}, {field('address.state')} {field('address.zip_code')}"
 
+
 def schema_gen() -> Event:
     start: int = field("timestamp", fmt=TimestampFormat.POSIX)
     end = start + random.randint(10, 3000)
@@ -89,13 +93,13 @@ def schema_gen() -> Event:
             "name": field("person.full_name"),
             "address": full_address(),
             "phone": field("person.telephone"),
-            "email": field("email")
+            "email": field("email"),
+            "user_id": field("uuid"),
         },
-        "user_id": field("uuid"),
-        "contacts": fieldset("person.full_name", i=random.randint(0,4)),
+        "contacts": fieldset("person.full_name", i=random.randint(1, 4))[1:],
         "organization_id": field("uuid"),
         "business_unit": field("choice", items=["HR", "Support", "Sales", "Manufacturing", "Engineering"]),
-        "resources": fieldset("text.word"),
+        "resources": fieldset("text.word", i=random.randint(1, 5)),
         "activity": {
             "start": start,
             "end": end
@@ -109,12 +113,47 @@ def schema_gen() -> Event:
     return evt
 
 
+def randomizer(values: int = 64) -> str:
+    return "".join(hex(random.randint(0, 15))[2:] for _ in range(values))
+
+
+def anonymizer(event: Event) -> Event:
+    # make a deepcopy of the event
+    event_cp = deepcopy(event)
+
+    # anonymize the participant
+    for key, _ in event_cp["participant"].items():
+        if key == "user_id":
+            event_cp["participant"]["user_id"] = field("uuid")
+        else:
+            event_cp["participant"][key] = randomizer()
+
+    # anonymize the contacts
+    for user in event_cp["contacts"]:
+        for key, _ in user.items():
+            if key == "user_id":
+                user["user_id"] = field("uuid")
+            else:
+                user[key] = randomizer()
+
+    # anonymize the organization_id
+    event_cp["organization_id"] = field("uuid")
+    return event_cp
+
 
 def textualize(event: Event):
-    return f"""For event_id {event['event_id']}, the following information was collected.  The participant_name is 
-    {event['participant']['name']}, the participant_address is {event['participant']['address']}, the participant_phone 
-    number is {event['participant']['phone']}, and the participaint email address is {event['participant']['email']}.
-    The user_id is {event['user_id']}, the business_unit is {event['business_unit']}, the priority is {event['priority']},
-    the version is {event['version']}, and the anonymized value is {event['anonymized']}.  The organization id is 
-    {event['organization_id']},
-"""
+    d = [f"For event_id {event['event_id']}, the following information was collected.\n",
+         f"The participant_name is {event['participant']['name']}, the participant_address is ",
+         f"{event['participant']['address']}, the participant_phone is {event['participant']['phone']}, "
+         f"and the participant_email is {event['participant']['email']}.\n",
+         f"The user_id is {event['user_id']}, and the contacts are {event['contacts']}.\n",
+         f"The organization_id is {event['organization_id']}, the business_unit is {event['business_unit']}, ",
+         f"and the resources are {event['resources']}.\n",
+         f"The activity_start time was {event['activity']['start']}, ",
+         f"and the activity end time was {event['activity']['end']}.\n"
+         f"The channel used to contact the participant was {event['channel']}, the priority of the event was ",
+         f"{event['priority']}, and the version of the event was {event['version']}.\n"
+         f"The anonymized field is {event['anonymized']}.\n"
+         ]
+
+    return ''.join(d)
