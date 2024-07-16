@@ -1,11 +1,11 @@
 # create a pytest unit test to test tab,schema_gen
 import pytest
-from tab_exp.tab import Event, anonymizer, is_anonymized, randomizer, schema_gen, textualize
+from tab_exp.tab import Event, anonymizer, is_anonymized, randomizer, event_generator, textualize
 
 
 @pytest.fixture()
 def event() -> Event:
-    return schema_gen()
+    return event_generator()
 
 
 def test_schema_gen(event: Event):
@@ -45,8 +45,8 @@ def test_anonymized_and_event_id_fields(event: Event):
 
 
 def test_random():
-    evt1 = schema_gen()
-    evt2 = schema_gen()
+    evt1 = event_generator()
+    evt2 = event_generator()
     print(evt1)
     print(evt2)
     assert evt1 != evt2, "events should have different values"
@@ -60,7 +60,7 @@ def test_text(event: Event):
 
 @pytest.fixture
 def event_to_anonymize():
-    return schema_gen()  # Create an Event instance using the schema_gen function
+    return event_generator()  # Create an Event instance using the schema_gen function
 
 
 def test_anonymizer(event_to_anonymize):
@@ -68,8 +68,8 @@ def test_anonymizer(event_to_anonymize):
 
     for key in anonymized_event['participant'].keys():
         assert anonymized_event["participant"][key] != event_to_anonymize["participant"][key]
-        if key == "user_id":
-            ...
+        atype = "uuid" if key == "user_id" else "random"
+        assert is_anonymized(anonymized_event['participant'][key]) == atype
     for o_contact, a_contact in zip(event_to_anonymize["contacts"], anonymized_event["contacts"]):
         for key in a_contact.keys():
             assert o_contact[key] != a_contact[key]

@@ -1,12 +1,16 @@
 
 from copy import deepcopy
+from pathlib import Path
 import random
 import re
+import shutil
+import time
 from typing import Literal, TypeAlias, TypedDict, cast
 
 from mimesis import Field, Fieldset
 from mimesis.enums import TimestampFormat
 from mimesis.locales import Locale
+import typer
 
 
 class User(TypedDict):
@@ -83,7 +87,7 @@ def full_address():
     return f"{field('address')}, {field('address.city')}, {field('address.state')} {field('address.zip_code')}"
 
 
-def schema_gen() -> Event:
+def event_generator() -> Event:
     seed = random.randint(0, 255)
     field = Field(Locale.EN, seed=seed)
     fieldset = Fieldset(Locale.EN, seed=seed)
@@ -91,15 +95,18 @@ def schema_gen() -> Event:
     start: int = field("timestamp", fmt=TimestampFormat.POSIX)
     end = start + random.randint(10, 3000)
 
-    evt = cast(Event, {
-        "participant": {
+    def make_user() -> User:
+        return {
             "name": field("person.full_name"),
             "address": full_address(),
             "phone": field("person.telephone"),
             "email": field("email"),
             "user_id": field("uuid"),
-        },
-        "contacts": fieldset("person.full_name", i=random.randint(1, 4))[1:],
+        }
+
+    evt = cast(Event, {
+        "participant": make_user(),
+        "contacts": [make_user() for _ in range(random.randint(0, 4))],
         "organization_id": field("uuid"),
         "business_unit": field("choice", items=["HR", "Support", "Sales", "Manufacturing", "Engineering"]),
         "resources": fieldset("text.word", i=random.randint(1, 5)),
@@ -160,19 +167,90 @@ def anonymizer(event: Event) -> Event:
     return event_cp
 
 
+def ordinal(n: int) -> str:
+    "returns the ordinal value of an int"
+    if n == 1:
+        return f"{n}st"
+    elif n == 2:
+        return f"{n}nd"
+    elif n == 3:
+        return f"{n}rd"
+    else:
+        return f"{n}th"
+
+
 def textualize(event: Event):
+    def user_str(users: list[User], name: str):
+        builder: list[str] = []
+        for i, user in enumerate(users, start=1):
+            for key, value in user.items():
+                if len(users) == 1:
+                    user_ord = ""
+                else:
+                    user_ord = f"{ordinal(i)} "
+                builder.append(f"The {user_ord}{name}_{key} is {value}.")
+        return "\n".join(builder)
+
+    def resource_str(resources: list[str]):
+        return f"The resources are {','.join(resources)}.\n"
+
     d = [f"For event_id {event['event_id']}, the following information was collected.\n",
-         f"The participant_name is {event['participant']['name']}, the participant_address is ",
-         f"{event['participant']['address']}, the participant_phone is {event['participant']['phone']}, "
-         f"and the participant_email is {event['participant']['email']}.\n",
-         f"The user_id is {event['participant']['user_id']}, and the contacts are {event['contacts']}.\n",
-         f"The organization_id is {event['organization_id']}, the business_unit is {event['business_unit']}, ",
-         f"and the resources are {event['resources']}.\n",
+         user_str([event["participant"]], "participant") + "\n",
+         user_str(event["contacts"], "contact") + "\n",
+         f"The organization_id is {event['organization_id']}.\n",
+         f"The business_unit is {event['business_unit']}.\n",
+         resource_str(event["resources"]),
          f"The activity_start time was {event['activity']['start']}, ",
          f"and the activity end time was {event['activity']['end']}.\n"
-         f"The channel used to contact the participant was {event['channel']}, the priority of the event was ",
-         f"{event['priority']}, and the version of the event was {event['version']}.\n"
+         f"The channel used to contact the participant was {event['channel']}.\n",
+         f"The priority of the event was {event['priority']}.\n",
+         f"The version of the event was {event['version']}.\n"
          f"The anonymized field is {event['anonymized']}.\n"
          ]
 
     return ''.join(d)
+
+
+def generate_synth_data(
+    samples: int,
+    output: str = "/tmp/synth_data",
+    clean: bool = False,
+    debug: bool = False
+):
+    start = time.time_ns()
+    op = Path(output)
+    if not op.exists():
+        op.mkdir()
+    op_not_anon = op / "not_anonymized"
+    op_anon = op / "anonymized"
+    if clean and op_not_anon.exists():
+        shutil.rmtree(op_not_anon)
+    if clean and op_anon.exists():
+        shutil.rmtree(op_anon)
+    op_not_anon.mkdir(exist_ok=True)
+    op_anon.mkdir(exist_ok=True)
+
+    gen = (event_generator() for _ in range(samples))
+    for event in gen:
+        text = textualize(event)
+        if debug:
+            print(text)
+        anon_evt = anonymizer(event)
+        atext = textualize(anon_evt)
+        if debug:
+            print("==================")
+            print(atext)
+
+        with open(op_not_anon / event["event_id"], "w+") as not_anonymized_file:
+            not_anonymized_file.write(text)
+        with open(op_anon / event["event_id"], "w+") as anonymized_file:
+            anonymized_file.write(atext)
+    end = time.time_ns()
+    delta = (end - start) / 10**9
+    print(f"{samples} events generated in {delta:.2f} seconds")
+    print(f"averaged {(samples / delta):.2f} events/sec")
+
+
+if __name__ == "__main__":
+    import typer
+    typer.run(generate_synth_data)
