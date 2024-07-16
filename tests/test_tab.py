@@ -39,7 +39,7 @@ def test_anonymized_and_event_id_fields(event: Event):
     anonymized_field = event["anonymized"]
     event_id_field = event["event_id"]
     # Verify that the anonymized field is set to "false"
-    assert anonymized_field == "false"
+    assert anonymized_field is False, "event was not anonymized"
     # Verify that the event_id field is a string
     assert isinstance(event_id_field, str)
 

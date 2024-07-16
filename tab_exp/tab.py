@@ -5,7 +5,7 @@ import random
 import re
 import shutil
 import time
-from typing import Literal, TypeAlias, TypedDict, cast
+from typing import Literal, TypedDict, cast
 
 from mimesis import Field, Fieldset
 from mimesis.enums import TimestampFormat
@@ -37,49 +37,8 @@ class Event(TypedDict):
     channel: str
     priority: int
     version: int
-    anonymized: Literal["false", "true"]
+    anonymized: bool
     event_id: str
-
-
-PiiColumnName: TypeAlias = Literal[
-    "participant.name",
-    "participant.address",
-    "participant.phone",
-    "participant.email",
-    "user_id",
-    "contacts",
-    "org_id",
-]
-
-ColumnName: TypeAlias = Literal[
-    "business_unit",
-    "resources",
-    "activity.start",
-    "activity.end",
-    "channel",
-    "priority",
-    "media_type"
-]
-
-Column: TypeAlias = PiiColumnName | ColumnName
-
-Columns = (
-    "participant.name",
-    "participant.address",
-    "participant.phone",
-    "participant.email",
-    "user_id",
-    "contacts",
-    "org_id",
-    "business_unit",
-    "resources",
-    "activity.start",
-    "activity.end",
-    "channel",
-    "priority",
-    "media_type",
-    "version"
-)
 
 
 def full_address():
@@ -117,7 +76,7 @@ def event_generator() -> Event:
         "channel": field("choice", items=["chat", "call", "msg", "email"]),
         "priority": field("choice", items=[1, 2, 3, 4]),
         "version": field("choice", items=[1, 2, 3, 4]),
-        "anonymized": "false",
+        "anonymized": False,
         "event_id": field("uuid")
     })
     return evt
@@ -164,6 +123,7 @@ def anonymizer(event: Event) -> Event:
 
     # anonymize the organization_id
     event_cp["organization_id"] = field("uuid")
+    event_cp["anonymized"] = True
     return event_cp
 
 
@@ -179,35 +139,50 @@ def ordinal(n: int) -> str:
         return f"{n}th"
 
 
-def textualize(event: Event):
-    def user_str(users: list[User], name: str):
-        builder: list[str] = []
-        for i, user in enumerate(users, start=1):
-            for key, value in user.items():
-                if len(users) == 1:
-                    user_ord = ""
-                else:
-                    user_ord = f"{ordinal(i)} "
-                builder.append(f"The {user_ord}{name}_{key} is {value}.")
-        return "\n".join(builder)
+def user_str(users: list[User], name: str):
+    """
+    This function takes a list of users and a name as input, then constructs
+    a string that describes each user's attributes.
 
-    def resource_str(resources: list[str]):
-        return f"The resources are {','.join(resources)}.\n"
+    Parameters: 
+    users (list[User]): A list of User objects
+    name (str): The name to use in the description
 
-    d = [f"For event_id {event['event_id']}, the following information was collected.\n",
-         user_str([event["participant"]], "participant") + "\n",
-         user_str(event["contacts"], "contact") + "\n",
-         f"The organization_id is {event['organization_id']}.\n",
-         f"The business_unit is {event['business_unit']}.\n",
-         resource_str(event["resources"]),
-         f"The activity_start time was {event['activity']['start']}, ",
-         f"and the activity end time was {event['activity']['end']}.\n"
-         f"The channel used to contact the participant was {event['channel']}.\n",
-         f"The priority of the event was {event['priority']}.\n",
-         f"The version of the event was {event['version']}.\n"
-         f"The anonymized field is {event['anonymized']}.\n"
-         ]
+    Returns: str
+    """
+    builder: list[str] = []
+    for i, user in enumerate(users, start=1):
+        for key, value in user.items():
+            if len(users) == 1:
+                user_ord = ""
+            else:
+                user_ord = f"{ordinal(i)} "
+            builder.append(f"The {user_ord}{name}_{key} is {value}.")
+    return "\n".join(builder)
 
+
+def resource_str(resources: list[str]):
+    return f"The resources are {','.join(resources)}.\n"
+
+
+def textualize(event: Event) -> str:
+
+    d = [
+        f"For event_id {event['event_id']}, the following information was collected.\n",
+        f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
+        user_str([event["participant"]], "participant") + "\n",
+        user_str(event["contacts"], "contact") + "\n",
+        f"The organization_id is {event['organization_id']}.\n",
+        f"The business_unit is {event['business_unit']}.\n",
+        resource_str(event["resources"]),
+        f"The activity_start time was {event['activity']['start']}, ",
+        f"and the activity end time was {event['activity']['end']}.\n"
+        f"The channel used to contact the participant was {event['channel']}.\n",
+        f"The priority of the event was {event['priority']}.\n",
+        f"The version of the event was {event['version']}.\n"
+    ]
+
+    # TODO: add the token markers for llama3
     return ''.join(d)
 
 
