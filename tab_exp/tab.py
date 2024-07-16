@@ -47,6 +47,15 @@ def full_address():
 
 
 def event_generator() -> Event:
+    """Generate a random Event.
+
+    This function uses the mimesis library to generate a fake event with various attributes,
+    including participant, contacts, organization_id, business_unit, resources, activity,
+    channel, priority, version, anonymized, and event_id.
+
+    Returns:
+        Event: A randomly generated event.
+    """
     seed = random.randint(0, 255)
     field = Field(Locale.EN, seed=seed)
     fieldset = Fieldset(Locale.EN, seed=seed)
@@ -83,10 +92,33 @@ def event_generator() -> Event:
 
 
 def randomizer(values: int = 64) -> str:
+    """Generate a hexadecimal string of the given length.
+
+    This function generates a hexadecimal string with the specified number of values.
+    Each value is randomly chosen from 0 to 15.
+
+    Args:
+        values (int): The desired length of the generated hexadecimal string.
+
+    Returns:
+        str: A random hexadecimal string.
+    """
     return "".join(map(lambda _: f"{random.randint(0,15):x}", range(values)))
 
 
 def is_anonymized(value: str, length: int = 64) -> Literal["uuid", "random", "none"]:
+    """ Determines the anonymization status of a given value.
+
+    This function checks if the given value is a UUID or a randomly generated string. If it matches
+    either pattern, it returns "uuid" or "random", respectively. Otherwise, it returns "none".
+
+    Parameters:
+        value (str): The value to check.
+        length (int): The length of the random string pattern. Default is 64.
+
+    Returns:
+        Literal["uuid", "random", "none"]: The anonymization status of the given value.
+    """
     rand_patt = re.compile(rf"^[a-f0-9]{{{length}}}$")
     uuid_patt = re.compile(
         r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
@@ -102,6 +134,19 @@ def is_anonymized(value: str, length: int = 64) -> Literal["uuid", "random", "no
 
 
 def anonymizer(event: Event) -> Event:
+    """Anonymizes an event by replacing sensitive information with randomly generated values.
+
+    This function takes an event as input and returns a new event where the participant's information,
+    contacts, organization ID, and other fields have been anonymized. The anonymization process
+    replaces the original values with random strings or UUIDs to protect the identity of the
+    individuals involved in the event.
+
+    Parameters:
+        event: The event to be anonymized
+
+    Returns:
+        A new event with anonymized information
+    """
     field = Field(Locale.EN, seed=random.randint(0, 255))
     # make a deepcopy of the event
     event_cp = deepcopy(event)
@@ -166,24 +211,22 @@ def resource_str(resources: list[str]):
 
 
 def textualize(event: Event) -> str:
-
-    d = [
-        f"For event_id {event['event_id']}, the following information was collected.\n",
-        f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
-        user_str([event["participant"]], "participant") + "\n",
-        user_str(event["contacts"], "contact") + "\n",
-        f"The organization_id is {event['organization_id']}.\n",
-        f"The business_unit is {event['business_unit']}.\n",
-        resource_str(event["resources"]),
-        f"The activity_start time was {event['activity']['start']}, ",
-        f"and the activity end time was {event['activity']['end']}.\n"
-        f"The channel used to contact the participant was {event['channel']}.\n",
-        f"The priority of the event was {event['priority']}.\n",
-        f"The version of the event was {event['version']}.\n"
-    ]
+    data = "".join([f"For event_id {event['event_id']}, the following information was collected.\n",
+                    f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
+                    user_str([event["participant"]], "participant") + "\n",
+                    user_str(event["contacts"], "contact") + "\n",
+                    f"The organization_id is {event['organization_id']}.\n",
+                    f"The business_unit is {event['business_unit']}.\n",
+                    resource_str(event["resources"]),
+                    f"The activity_start time was {event['activity']['start']}, ",
+                    f"and the activity end time was {event['activity']['end']}.\n"
+                    f"The channel used to contact the participant is {event['channel']}.\n",
+                    f"The priority of the event is {event['priority']}.\n",
+                    f"The version of the event is {event['version']}.\n"
+                    ])
 
     # TODO: add the token markers for llama3
-    return ''.join(d)
+    return data
 
 
 def generate_synth_data(
