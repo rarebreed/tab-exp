@@ -44,6 +44,7 @@ test = "pytest -v"
 check = {depends-on = ["format", "lint", "test"]}
 git-add = {cmd = ["git", "add", "."], depends-on = ["check"]}
 commit= {cmd = "git commit -m ", depends-on = ["git-add"]}
+push = {cmd  = "git push origin "}
 
 [environments]
 #win = ["win"]
