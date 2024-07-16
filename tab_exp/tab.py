@@ -1,14 +1,12 @@
 
 from copy import deepcopy
 import random
+import re
 from typing import Literal, TypeAlias, TypedDict, cast
 
 from mimesis import Field, Fieldset
 from mimesis.enums import TimestampFormat
 from mimesis.locales import Locale
-
-field = Field(Locale.EN, seed=0xff)
-fieldset = Fieldset(Locale.EN, seed=0xff)
 
 
 class User(TypedDict):
@@ -81,10 +79,15 @@ Columns = (
 
 
 def full_address():
+    field = Field(Locale.EN, seed=random.randint(0, 255))
     return f"{field('address')}, {field('address.city')}, {field('address.state')} {field('address.zip_code')}"
 
 
 def schema_gen() -> Event:
+    seed = random.randint(0, 255)
+    field = Field(Locale.EN, seed=seed)
+    fieldset = Fieldset(Locale.EN, seed=seed)
+
     start: int = field("timestamp", fmt=TimestampFormat.POSIX)
     end = start + random.randint(10, 3000)
 
@@ -114,10 +117,26 @@ def schema_gen() -> Event:
 
 
 def randomizer(values: int = 64) -> str:
-    return "".join(hex(random.randint(0, 15))[2:] for _ in range(values))
+    return "".join(map(lambda _: f"{random.randint(0,15):x}", range(values)))
+
+
+def is_anonymized(value: str, length: int = 64) -> Literal["uuid", "random", "none"]:
+    rand_patt = re.compile(rf"^[a-f0-9]{{{length}}}$")
+    uuid_patt = re.compile(
+        r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
+
+    m = rand_patt.search(value)
+    if m:
+        return "random"
+    m = uuid_patt.search(value)
+    if m:
+        return "uuid"
+    else:
+        return "none"
 
 
 def anonymizer(event: Event) -> Event:
+    field = Field(Locale.EN, seed=random.randint(0, 255))
     # make a deepcopy of the event
     event_cp = deepcopy(event)
 
@@ -146,7 +165,7 @@ def textualize(event: Event):
          f"The participant_name is {event['participant']['name']}, the participant_address is ",
          f"{event['participant']['address']}, the participant_phone is {event['participant']['phone']}, "
          f"and the participant_email is {event['participant']['email']}.\n",
-         f"The user_id is {event['user_id']}, and the contacts are {event['contacts']}.\n",
+         f"The user_id is {event['participant']['user_id']}, and the contacts are {event['contacts']}.\n",
          f"The organization_id is {event['organization_id']}, the business_unit is {event['business_unit']}, ",
          f"and the resources are {event['resources']}.\n",
          f"The activity_start time was {event['activity']['start']}, ",
