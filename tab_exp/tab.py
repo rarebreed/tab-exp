@@ -211,19 +211,21 @@ def resource_str(resources: list[str]):
 
 
 def textualize(event: Event) -> str:
-    data = "".join([f"For event_id {event['event_id']}, the following information was collected.\n",
-                    f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
-                    user_str([event["participant"]], "participant") + "\n",
-                    user_str(event["contacts"], "contact") + "\n",
-                    f"The organization_id is {event['organization_id']}.\n",
-                    f"The business_unit is {event['business_unit']}.\n",
-                    resource_str(event["resources"]),
-                    f"The activity_start time was {event['activity']['start']}, ",
-                    f"and the activity end time was {event['activity']['end']}.\n"
-                    f"The channel used to contact the participant is {event['channel']}.\n",
-                    f"The priority of the event is {event['priority']}.\n",
-                    f"The version of the event is {event['version']}.\n"
-                    ])
+    data = "".join([
+        "",
+        f"For event_id {event['event_id']}, the following information was collected.\n",
+        f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
+        user_str([event["participant"]], "participant") + "\n",
+        user_str(event["contacts"], "contact") + "\n",
+        f"The organization_id is {event['organization_id']}.\n",
+        f"The business_unit is {event['business_unit']}.\n",
+        resource_str(event["resources"]),
+        f"The activity_start time was {event['activity']['start']}, ",
+        f"and the activity end time was {event['activity']['end']}.\n"
+        f"The channel used to contact the participant is {event['channel']}.\n",
+        f"The priority of the event is {event['priority']}.\n",
+        f"The version of the event is {event['version']}.\n"
+    ])
 
     # TODO: add the token markers for llama3
     return data
