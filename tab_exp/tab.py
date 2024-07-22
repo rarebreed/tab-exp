@@ -1,5 +1,6 @@
 
 from copy import deepcopy
+import json
 from pathlib import Path
 import random
 import re
@@ -107,7 +108,7 @@ def randomizer(values: int = 64) -> str:
 
 
 def is_anonymized(value: str, length: int = 64) -> Literal["uuid", "random", "none"]:
-    """ Determines the anonymization status of a given value.
+    """Determines the anonymization status of a given value.
 
     This function checks if the given value is a UUID or a randomly generated string. If it matches
     either pattern, it returns "uuid" or "random", respectively. Otherwise, it returns "none".
@@ -261,6 +262,10 @@ def generate_synth_data(
             print("==================")
             print(atext)
 
+        with open(op_not_anon / f"{event['event_id']}.json", "w+") as jf:
+            jf.write(json.dumps(event, indent=2))
+        with open(op_anon / f"{event['event_id']}.json", "w+") as jf:
+            jf.write(json.dumps(anon_evt, indent=2))
         with open(op_not_anon / event["event_id"], "w+") as not_anonymized_file:
             not_anonymized_file.write(text)
         with open(op_anon / event["event_id"], "w+") as anonymized_file:

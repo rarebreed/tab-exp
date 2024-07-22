@@ -1,6 +1,6 @@
 # tab-exp
 
-This is an expierment to convert tabular or structured data into textual information that can be used by a transformer.
+This is an experiment to convert tabular or structured data into textual information that can be used by a transformer.
 Generally, transformers do not work well on tabular data, and only do about as well as Gradient Boosted Decision Trees.
 Transformers in particular work best on unstructured data like text, images or audio.
 

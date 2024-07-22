@@ -12,21 +12,21 @@ ollama-llama3 = "ollama pull llama3:8b"
 ollama-pull = { cmd = "ollama pull starcoder2:3b", depends-on = ["ollama-llama3"]}
 ollama-status = {cmd = "sudo systemctl status ollama"}
 ollama-ps = "ollama ps"
+vscode-ext = {cmd = ["code", "--install-extension", "Continue.continue"]}
 
 #[feature.win.tasks]
 #win-ollama-install = {cmd = "winget install ollama"}
 
-[feature.linux.tasks]
-ollama-install  = {cmd = "curl -fsSL https://ollama.com/install.sh | sh"}
-python-deps = {cmd = ["sudo", "apt", "install", "-y", 
-    "build-essential", "libssl-dev", "zlib1g-dev",
-    "libbz2-dev", "libreadline-dev", "libsqlite3-dev", "curl", "git",
-    "libncursesw5-dev", "xz-utils", "tk-dev", "libxml2-dev", 
-    "libxmlsec1-dev", "libffi-dev", "liblzma-dev"]}
-vscode-ext = {cmd = ["code", "--install-extension", "Continue.continue"]}
+# [feature.linux.tasks]
+# ollama-install  = {cmd = "curl -fsSL https://ollama.com/install.sh | sh"}
+# python-deps = {cmd = ["sudo", "apt", "install", "-y", 
+#     "build-essential", "libssl-dev", "zlib1g-dev",
+#     "libbz2-dev", "libreadline-dev", "libsqlite3-dev", "curl", "git",
+#     "libncursesw5-dev", "xz-utils", "tk-dev", "libxml2-dev", 
+#     "libxmlsec1-dev", "libffi-dev", "liblzma-dev"]}
 
-[feature.dev]
-platforms = ["linux-64", "win-64",]
+#[feature.dev]
+#platforms = ["linux-64", "win-64",]
 
 [feature.dev.dependencies]
 pytest = "*"
@@ -44,22 +44,20 @@ commit= {cmd = "git commit -m ", depends-on = ["git-add"]}
 push = {cmd  = "git push origin "}
 
 [environments]
-linux = ["linux"]
 dev = ["dev"]
 
 [dependencies]
 python = ">=3.11.6,<3.12"
 pytorch = ">=2.2,<2.3"
 pytorch-cuda = ">=11.8.0"
+jupyter = ">=1.0.0,<1.1"
 
 [pypi-dependencies]
-pytorch-tabular = { version = "*", extras = ["extra"] }
 ipykernel = "*"
-scipy = { version = ">=1.12.0, <1.13" }
-numpy = { version = ">=1.23,<1.24" }
 polars = "*"
 mimesis = "*"
 typer = ">=0.12.3, <0.13"
-tiktoken = ">=0.7.0, <0.8"
 transformers = ">=4.42.4, <4.43"
 accelerate = ">=0.32.1, <0.33"
+huggingface-hub = ">=0.24.0, <0.25"
+datasets = ">=2.20.0, <2.21"
