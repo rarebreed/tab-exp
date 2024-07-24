@@ -2,16 +2,19 @@
 from copy import deepcopy
 import json
 from pathlib import Path
+from pprint import pprint
 import random
 import re
 import shutil
 import time
-from typing import Literal, TypedDict, cast
+from typing import Literal, TypeAlias, TypedDict, cast
 
 from mimesis import Field, Fieldset
 from mimesis.enums import TimestampFormat
 from mimesis.locales import Locale
 import typer
+
+PIILabel: TypeAlias = Literal["anon", "orig"]
 
 
 class User(TypedDict):
@@ -185,7 +188,7 @@ def ordinal(n: int) -> str:
         return f"{n}th"
 
 
-def user_str(users: list[User], name: str):
+def user_str(users: list[User], name: str) -> list[str]:
     """
     This function takes a list of users and a name as input, then constructs
     a string that describes each user's attributes.
@@ -204,32 +207,78 @@ def user_str(users: list[User], name: str):
             else:
                 user_ord = f"{ordinal(i)} "
             builder.append(f"The {user_ord}{name}_{key} is {value}.")
-    return "\n".join(builder)
+    return builder
 
 
 def resource_str(resources: list[str]):
     return f"The resources are {','.join(resources)}.\n"
 
 
-def textualize(event: Event) -> str:
-    data = "".join([
-        "",
-        f"For event_id {event['event_id']}, the following information was collected.\n",
-        f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
-        user_str([event["participant"]], "participant") + "\n",
-        user_str(event["contacts"], "contact") + "\n",
-        f"The organization_id is {event['organization_id']}.\n",
-        f"The business_unit is {event['business_unit']}.\n",
-        resource_str(event["resources"]),
-        f"The activity_start time was {event['activity']['start']}, ",
-        f"and the activity end time was {event['activity']['end']}.\n"
-        f"The channel used to contact the participant is {event['channel']}.\n",
-        f"The priority of the event is {event['priority']}.\n",
-        f"The version of the event is {event['version']}.\n"
-    ])
+class PIIData(TypedDict):
+    label: PIILabel
+    text: str
 
-    # TODO: add the token markers for llama3
-    return data
+
+def make_dataset(event: Event, label: PIILabel) -> list[PIIData]:
+    return [{"label": label, "text": line} for line in [
+        # f"For event_id {event['event_id']}, the following information was collected.\n",
+        # f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
+        *user_str([event["participant"]], "participant"),
+        *user_str(event["contacts"], "contact"),
+        f"The organization_id is {event['organization_id']}.",
+        f"The business_unit is {event['business_unit']}.",
+        resource_str(event["resources"]),
+        f"The activity_start time was {event['activity']['start']}.",
+        f"The activity_end time was {event['activity']['end']}.",
+        f"The channel used to contact the participant is {event['channel']}.",
+        f"The priority of the event is {event['priority']}.",
+        f"The version of the event is {event['version']}."
+    ]]
+
+
+# def create_chat(event: Event):
+#     messages = [
+#         {"role": "system",
+#          "content": "You are a bot that responds to questions about Personally Identifiable Information (PII)."},
+#         {"role": "user",
+#          "content": f"Given the following JSON document:\n{event}\n, which fields in the JSON are PII?"},
+#         {"role": "assistant",
+#          "content": ""
+#         }
+#     ]
+#     return messages
+
+# def create_pii_field():
+#     messages = [
+#         {"role": "system",
+#          "content": "You are a bot that responds to questions about Personally Identifiable Information (PII)"},
+#         {"role": "user",
+#          "content": "Is a JSON object that has a key name that ends in '_id' a PII field?"},
+#         {"role":"assistant",
+#          "content": "It depends.  If the value of the key is a unique identifier, then it is likely that it is PII, " +
+#          "because it can be used to uniquely identify an individual.  If the value is not a unique identifier, then " +
+#          "may be a coincidence that the key ends in '_id"},
+#         {"role": "user",
+#          "content": "If a key name in a JSON object ends in '_id', and the value is a unique value like a UUID, is " +
+#          "the field a PII field?"},
+#         {"role": "assistant",
+#          "content": "Yes, it is more likely that the field is a PII, if the key starts with an entity related to a " +
+#          "person.  For example, user_id is an example of a key in a JSON object that is PII.  However, if the start " +
+#          "of the key is not related to a person, or to an external context related to a person, then it probably is " +
+#          "not.  For example, event_id, bug_id, or process_id, would not be related to a person.  Keys like contact_id" +
+#          "external_id, external_contact_id, are also most likely"}
+#     ]
+#     return messages
+
+
+def jsonl(data: list[PIIData]) -> str:
+    return "\n".join(json.dumps(d) for d in data)
+
+
+class SynthDataPath(TypedDict):
+    not_anonymized_path: str
+    anonymized_path: str
+    combined_path: str
 
 
 def generate_synth_data(
@@ -237,43 +286,68 @@ def generate_synth_data(
     output: str = "/tmp/synth_data",
     clean: bool = False,
     debug: bool = False
-):
+) -> SynthDataPath:
     start = time.time_ns()
     op = Path(output)
     if not op.exists():
-        op.mkdir()
+        op.mkdir(parents=True)
     op_not_anon = op / "not_anonymized"
     op_anon = op / "anonymized"
+    op_combined = op / "combined"
     if clean and op_not_anon.exists():
         shutil.rmtree(op_not_anon)
     if clean and op_anon.exists():
         shutil.rmtree(op_anon)
+    if clean and op_combined.exists():
+        shutil.rmtree(op_combined)
     op_not_anon.mkdir(exist_ok=True)
     op_anon.mkdir(exist_ok=True)
+    op_combined.mkdir(exist_ok=True)
 
     gen = (event_generator() for _ in range(samples))
-    for event in gen:
-        text = textualize(event)
-        if debug:
-            print(text)
-        anon_evt = anonymizer(event)
-        atext = textualize(anon_evt)
-        if debug:
-            print("==================")
-            print(atext)
+    all_orig_events: list[PIIData] = []
+    all_anon_events: list[PIIData] = []
+    for evt in gen:
+        orig_events = make_dataset(evt, "orig")
+        anon_events = make_dataset(anonymizer(evt), "anon")
+        all_orig_events += orig_events
+        all_anon_events += anon_events
 
-        with open(op_not_anon / f"{event['event_id']}.json", "w+") as jf:
-            jf.write(json.dumps(event, indent=2))
-        with open(op_anon / f"{event['event_id']}.json", "w+") as jf:
-            jf.write(json.dumps(anon_evt, indent=2))
-        with open(op_not_anon / event["event_id"], "w+") as not_anonymized_file:
-            not_anonymized_file.write(text)
-        with open(op_anon / event["event_id"], "w+") as anonymized_file:
-            anonymized_file.write(atext)
+    combined: list[PIIData] = []
+    for o, a in zip(all_orig_events, all_anon_events):
+        combined.append(o)
+        combined.append(a)
+
+    not_anon_jsonl = op_not_anon / "not_anonymized.jsonl"
+    with open(not_anon_jsonl, "w+") as jf:
+        jf.write(jsonl(all_orig_events))
+    anon_jsonl = op_anon / "anonymized.jsonl"
+    with open(anon_jsonl, "w+") as jf:
+        jf.write(jsonl(all_anon_events))
+    combined_jsonl = op_combined / "combined.jsonl"
+    with open(combined_jsonl, "w+") as cf:
+        cf.write(jsonl(combined))
+
+    if debug:
+        pprint(all_orig_events)
+        print("======================")
+        pprint(all_anon_events)
+        not_anon_json = op_not_anon / "not_anonymized.json"
+        with open(not_anon_json, "w") as not_anonymized_file:
+            not_anonymized_file.write(json.dumps(all_orig_events, indent=2))
+        anon_json = op_anon / "anonymized.json"
+        with open(anon_json, "w") as anonymized_file:
+            anonymized_file.write(json.dumps(all_anon_events, indent=2))
+
     end = time.time_ns()
     delta = (end - start) / 10**9
     print(f"{samples} events generated in {delta:.2f} seconds")
     print(f"averaged {(samples / delta):.2f} events/sec")
+    return {
+        "not_anonymized_path": str(not_anon_jsonl),
+        "anonymized_path": str(anon_jsonl),
+        "combined_path": str(combined_jsonl)
+    }
 
 
 if __name__ == "__main__":

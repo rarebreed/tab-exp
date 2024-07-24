@@ -1,6 +1,6 @@
 # create a pytest unit test to test tab,schema_gen
 import pytest
-from tab_exp.tab import Event, anonymizer, is_anonymized, randomizer, event_generator, textualize
+from tab_exp.tab import Event, anonymizer, is_anonymized, randomizer, event_generator, make_dataset
 
 
 @pytest.fixture()
@@ -52,10 +52,11 @@ def test_random():
     assert evt1 != evt2, "events should have different values"
 
 
-def test_text(event: Event):
-    doc = textualize(event)
+def test_text_orig(event: Event):
+    doc = make_dataset(event, "orig")
     print(doc)
-    assert isinstance(doc, str)
+    assert isinstance(doc[0]["text"], str), "text feature should be a str"
+    assert doc[0]["label"] == "orig", "the label should be orig"
 
 
 @pytest.fixture
