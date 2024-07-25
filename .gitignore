@@ -6,3 +6,8 @@
 **/__pycache__/
 **/.pytest_cache/
 **/.ruff_cache/
+
+samp  les_validate/
+samples_validate/
+samples_train/
+samples_test/
