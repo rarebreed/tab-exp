@@ -15,6 +15,12 @@ from mimesis.locales import Locale
 import typer
 
 PIILabel: TypeAlias = Literal["anon", "orig"]
+PIILabelInt: TypeAlias = Literal[0, 1]
+
+LabelMap: dict[str, PIILabelInt] = {
+    "orig": 0,
+    "anon": 1
+}
 
 
 class User(TypedDict):
@@ -215,12 +221,12 @@ def resource_str(resources: list[str]):
 
 
 class PIIData(TypedDict):
-    label: PIILabel
+    label: PIILabelInt
     text: str
 
 
 def make_dataset(event: Event, label: PIILabel) -> list[PIIData]:
-    return [{"label": label, "text": line} for line in [
+    return [{"label": LabelMap[label], "text": line} for line in [
         # f"For event_id {event['event_id']}, the following information was collected.\n",
         # f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
         *user_str([event["participant"]], "participant"),

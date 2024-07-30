@@ -56,7 +56,7 @@ def test_text_orig(event: Event):
     doc = make_dataset(event, "orig")
     print(doc)
     assert isinstance(doc[0]["text"], str), "text feature should be a str"
-    assert doc[0]["label"] == "orig", "the label should be orig"
+    assert doc[0]["label"] == 0, "the label should be orig"
 
 
 @pytest.fixture
