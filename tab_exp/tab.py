@@ -226,20 +226,22 @@ class PIIData(TypedDict):
 
 
 def make_dataset(event: Event, label: PIILabel) -> list[PIIData]:
-    return [{"label": LabelMap[label], "text": line} for line in [
-        # f"For event_id {event['event_id']}, the following information was collected.\n",
-        # f"The event has {'' if event['anonymized'] else 'not '}been anonymized",
-        *user_str([event["participant"]], "participant"),
-        *user_str(event["contacts"], "contact"),
-        f"The organization_id is {event['organization_id']}.",
-        f"The business_unit is {event['business_unit']}.",
-        resource_str(event["resources"]),
-        f"The activity_start time was {event['activity']['start']}.",
-        f"The activity_end time was {event['activity']['end']}.",
-        f"The channel used to contact the participant is {event['channel']}.",
-        f"The priority of the event is {event['priority']}.",
-        f"The version of the event is {event['version']}."
+    data: list[PIIData] = [{"label": LabelMap[lbl], "text": line} for lbl, line in [
+        *[(label, us)
+          for us in user_str([event["participant"]], "participant")],
+        *[(label, us) for us in user_str(event["contacts"], "contact")],
+        (label, f"The organization_id is {event['organization_id']}."),
+        ("orig", f"The business_unit is {event['business_unit']}."),
+        ("orig", resource_str(event["resources"])),
+        ("orig", f"The activity_start time was {event['activity']['start']}."),
+        ("orig", f"The activity_end time was {event['activity']['end']}."),
+        ("orig",
+         f"The channel used to contact the participant is {event['channel']}."),
+        ("orig", f"The priority of the event is {event['priority']}."),
+        ("orig", f"The version of the event is {event['version']}.")
     ]]
+    random.shuffle(data)
+    return data
 
 
 def jsonl(data: list[PIIData]) -> str:
