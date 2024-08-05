@@ -11,5 +11,5 @@ samp  les_validate/
 samples_validate/
 samples_train/
 samples_test/
-finetuned/
+finetuned*/
 notebooks/sentiment_classification/
