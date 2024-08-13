@@ -60,11 +60,11 @@ def test_text_orig(event: Event):
 
 
 @pytest.fixture
-def event_to_anonymize():
+def event_to_anonymize() -> Event:
     return event_generator()  # Create an Event instance using the schema_gen function
 
 
-def test_anonymizer(event_to_anonymize):
+def test_anonymizer(event_to_anonymize: Event):
     anonymized_event = anonymizer(event_to_anonymize)
 
     for key in anonymized_event['participant'].keys():
