@@ -29,10 +29,10 @@ vscode-ext = {cmd = ["code", "--install-extension", "Continue.continue"]}
 #platforms = ["linux-64", "win-64",]
 
 [feature.dev.dependencies]
-pytest = "*"
-pytest-asyncio = "*"
 autopep8 = "*"
 ruff = "*"
+pytest = ">=8.3.2,<9"
+pytest-asyncio = ">=0.23.8,<0.24"
 
 [feature.dev.tasks]
 format = "autopep8 -i -r ."
@@ -59,8 +59,8 @@ ipykernel = "*"
 polars = "*"
 mimesis = "*"
 typer = ">=0.12.3, <0.13"
-transformers = ">=4.42.4, <4.43"
-accelerate = ">=0.32.1, <0.33"
+transformers = ">=4.42.4, <4.44"
+accelerate = ">=0.32.1, <0.34"
 huggingface-hub = ">=0.24.0, <0.25"
 bitsandbytes = ">=0.43.1, <0.44"
 peft = ">=0.11.1, <0.12"
