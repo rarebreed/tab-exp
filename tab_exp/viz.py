@@ -19,16 +19,16 @@ def model_choice() -> tuple[Checkbox, Checkbox, iw.Dropdown]:
     models = finetuned_dirs + hf_modules
     print(f"{finetuned_dirs=}")
 
-    initial = iw.Checkbox(value=True,
-                          description="Initial Predictions",
-                          indent=False)
+    train = iw.Checkbox(value=False,
+                        description="Train model",
+                        indent=False)
     new_data = iw.Checkbox(value=False,
                            description="New Data",
                            indent=False)
     model_name = iw.Dropdown(options=models,
                              description="Model Name")
-    display(iw.VBox([initial, new_data, model_name]))
-    return initial, new_data, model_name
+    display(iw.VBox([train, new_data, model_name]))
+    return train, new_data, model_name
 
 
 def get_hf_model(choice: str):
